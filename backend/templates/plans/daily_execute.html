@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}今日执行 - Pattern{% endblock %}
+
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">今日执行</h1>
+    <form method="post" action="{% url 'plans:toggle_lazy_mode' %}">
+        {% csrf_token %}
+        {% if request.session.is_lazy_mode %}
+            <button type="submit" name="enable" value="0"
+                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm">
+                🔥 恢复正常模式
+            </button>
+        {% else %}
+            <button type="submit" name="enable" value="1"
+                    class="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm hover:bg-orange-200">
+                ☕ 轻松模式
+            </button>
+        {% endif %}
+    </form>
+</div>
+
+{% if request.session.is_lazy_mode %}
+<div class="bg-orange-50 border border-orange-200 text-orange-600 text-sm px-4 py-2 rounded-lg mb-4">
+    ☕ 轻松模式已开启 — 降低标准，但不停下脚步
+</div>
+{% endif %}
+
+<div class="max-w-lg mx-auto">
+    {% if all_completed %}
+    <div class="bg-green-100 text-green-700 text-center py-4 rounded-lg mb-6 text-xl">
+        🎉 今日全部完成！
+    </div>
+    {% endif %}
+
+    {% if blocks %}
+    <div class="space-y-2">
+        {% for block in blocks %}
+        <div id="block-card-{{ block.pk }}" class="rounded-xl border border-muted px-4 py-3 transition-colors theme-card
+                    {% if block.has_conflict %}border-l-4 border-l-red-400{% elif block.is_completed %}border-l-4 border-l-green-500{% endif %}">
+
+            {# 第一行：任务名 + 勾选按钮 #}
+            <div class="flex items-center gap-3">
+                <div class="flex-1">
+                    {% if block.is_completed %}
+                        <p class="line-through text-gray-400 font-medium">{{ block.action }}</p>
+                    {% else %}
+                        <span class="font-medium editable-task"
+                              hx-get="/plans/inline-edit/{{ block.pk }}/?field=action"
+                              hx-trigger="click"
+                              hx-target="this"
+                              hx-swap="outerHTML"
+                              title="点击编辑任务">{{ block.action }}</span>
+                    {% endif %}
+                </div>
+
+                {% if not block.is_completed %}
+                <button hx-post="{% url 'plans:complete_block' block.pk %}"
+                        hx-target="#block-card-{{ block.pk }}"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 rounded-full border-2 text-accent hover: flex items-center justify-center flex-shrink-0">
+                    ✓
+                </button>
+                {% else %}
+                <button hx-post="{% url 'plans:undo_block' block.pk %}"
+                        hx-target="#block-card-{{ block.pk }}"
+                        hx-swap="outerHTML"
+                        class="text-xs text-gray-400 hover:text-gray-600 px-1"
+                        title="撤销完成">↩</button>
+                <span class="text-green-500 text-xl flex-shrink-0">✓</span>
+                {% endif %}
+            </div>
+
+            {# 第二行：时间标签 + 来源计划 #}
+            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                {% if not block.is_completed %}
+                <span class="editable-time text-xs {% if block.has_conflict %}text-gray-400 bg-gray-200{% else %}text-gray-500 bg-gray-100{% endif %} px-2 py-0.5 rounded-full"
+                      hx-get="/plans/inline-edit/{{ block.pk }}/?field=start_time"
+                      hx-trigger="click"
+                      hx-target="this"
+                      hx-swap="outerHTML"
+                      title="点击编辑开始时间">≈ {{ block.start_time|time:"H:i" }}</span>
+                <span class="text-xs text-gray-300">—</span>
+                <span class="editable-time text-xs {% if block.has_conflict %}text-gray-400 bg-gray-200{% else %}text-gray-500 bg-gray-100{% endif %} px-2 py-0.5 rounded-full"
+                      hx-get="/plans/inline-edit/{{ block.pk }}/?field=end_time"
+                      hx-trigger="click"
+                      hx-target="this"
+                      hx-swap="outerHTML"
+                      title="点击编辑结束时间">≈ {{ block.end_time|time:"H:i" }}</span>
+                {% else %}
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ block.start_time|time:"H:i" }} — {{ block.end_time|time:"H:i" }}</span>
+                {% endif %}
+
+                <span class="text-xs text-gray-400 ml-auto">{{ block.plan_title }}</span>
+            </div>
+
+            {# 冲突提示 #}
+            {% if block.has_conflict and not block.is_completed %}
+            <p class="text-xs text-gray-500 mt-1.5">⚠️ {{ block.conflict_note }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <p class="text-gray-400 text-center py-12">
+        还没有启用任何计划。<br>
+        <a href="{% url 'plans:plan_list' %}?tab=collection" class="text-accent">
+            去收藏库启用计划
+        </a>
+    </p>
+    {% endif %}
+</div>
+
+{# 结束今日按钮 #}
+<div class="max-w-lg mx-auto mt-6 text-center">
+    <form method="post" action="{% url 'plans:end_today' %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="text-sm text-gray-400 hover:text-gray-600 border border-muted px-4 py-2 rounded-xl">
+            结束今日 📋
+        </button>
+    </form>
+    <p class="text-xs text-gray-400 mt-1">手动结束或等明天自动归档</p>
+</div>
+
+{# 全部完成后的感受表单 + 战绩分享 #}
+{% if all_completed %}
+<div class="max-w-lg mx-auto">
+    <form method="post" action="{% url 'plans:save_mood' %}">
+        {% csrf_token %}
+        <div class="mt-8 p-4 bg-gray-50 rounded-xl">
+            <h3 class="font-semibold mb-2">今天的感受</h3>
+            <input type="hidden" name="mood" id="moodInput" value="">
+            <div class="flex gap-4 mb-4 text-3xl" id="moodSelector">
+                <button type="button" data-mood="😊"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😊</button>
+                <button type="button" data-mood="😐"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😐</button>
+                <button type="button" data-mood="😢"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😢</button>
+            </div>
+            <textarea name="note" placeholder="写点感想..." class="w-full border rounded-xl p-2"></textarea>
+            <button type="submit" class="btn-accent text-white px-4 py-2 rounded-xl mt-2">保存</button>
+        </div>
+    </form>
+
+    <div class="mt-6 p-6 bg-green-50 rounded-xl text-center">
+        <p class="text-2xl mb-4">🎉 今日全部完成！</p>
+        <a href="{% url 'plans:today_share_card' %}"
+           class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+           download="今日战绩_{{ today }}.png">
+            📤 炫耀一下 🔥
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.mood-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('moodInput').value = this.dataset.mood;
+            document.querySelectorAll('.mood-btn').forEach(b => {
+                b.classList.remove('ring-2', '', '');
+            });
+            this.classList.add('ring-2', '', '');
+        });
+    });
+</script>
+{% endblock %}

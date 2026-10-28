@@ -1,0 +1,107 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "行动锚",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/library/library",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "模板库",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/search/search",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "搜索",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/detail/detail",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "模板详情",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/execute/execute",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "执行",
+				"disableScroll": true
+			}
+		},
+		{
+			"path": "pages/mine/mine",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "我的",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/login/login",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "登录",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/login/forgot",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "找回密码",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/login/reset",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "重置密码",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/create/create",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "创建模板",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/tasks/tasks",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "我的任务",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/schedule/schedule",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "日程",
+				"enablePullDownRefresh": false
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "行动锚",
+		"navigationBarBackgroundColor": "#F7F5F2",
+		"backgroundColor": "#F7F5F2"
+	},
+	"uniIdRouter": {}
+}

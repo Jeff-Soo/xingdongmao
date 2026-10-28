@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">我的计划</h1>
+    <a href="{% url 'plans:calendar_view' %}" class="text-accent  text-sm">
+        📅 打卡日历
+    </a>
+</div>
+
+<div class="flex gap-4 mb-6 border-b">
+    <a href="?tab=collection" class="pb-2 border-b-2 {% if tab == 'collection' %} text-accent{% else %}border-transparent text-gray-500{% endif %}">
+        📚 我的收藏 ({{ plans.count }})
+    </a>
+    <a href="?tab=today" class="pb-2 border-b-2 {% if tab == 'today' %} text-accent{% else %}border-transparent text-gray-500{% endif %}">
+        📅 今日计划
+    </a>
+</div>
+
+{# 收藏库标签：列出所有 Plan #}
+{% if tab == 'collection' %}
+<div class="space-y-4">
+    <div class="text-sm text-gray-500">
+        已启用
+        <span class="font-medium {% if enabled_count >= 3 %}text-orange-600{% else %}text-accent{% endif %}">{{ enabled_count }}</span>
+        / 3 个计划
+        {% if enabled_count >= 3 %}
+        <span class="text-xs text-orange-500 ml-1">已达上限</span>
+        {% endif %}
+    </div>
+    {% for plan in plans %}
+    <div class="border rounded-lg p-4 {% if plan.activated_date == today %}ring-2 {% endif %} {% if not plan.is_enabled %}opacity-60{% endif %}">
+        <div class="flex justify-between items-start">
+            <div>
+                <h2 class="text-xl font-semibold">{{ plan.title }}</h2>
+                <p class="text-gray-500 text-sm">时间块数：{{ plan.blocks.count }}</p>
+                <p class="text-gray-500 text-sm">最后编辑：{{ plan.updated_at|date:"Y-m-d H:i" }}</p>
+            </div>
+            <!-- 启用/停用 toggle -->
+            <form method="post" action="{% url 'plans:toggle_enabled' plan.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-xs px-2 py-1 rounded-xl border
+                        {% if plan.is_enabled %}
+                            bg-green-50 text-green-700 border-green-300 hover:bg-green-100
+                        {% else %}
+                            bg-gray-100 text-gray-500 border-muted hover:bg-gray-200
+                        {% endif %}">
+                    {% if plan.is_enabled %}✓ 已启用{% else %}○ 已停用{% endif %}
+                </button>
+            </form>
+        </div>
+        <div class="mt-3 flex gap-3 items-center">
+            <a href="{% url 'plans:plan_edit' plan.pk %}" class="text-accent ">编辑</a>
+            <form method="post" action="{% url 'plans:delete_plan' plan.pk %}"
+                  onsubmit="return confirm('确定删除「{{ plan.title }}」吗？此操作不可撤销')">
+                {% csrf_token %}
+                <button type="submit" class="text-red-500 hover:text-red-700">删除</button>
+            </form>
+            {% if plan.is_enabled %}
+                {% if plan.activated_date == today %}
+                <span class=" text-indigo-700 px-2 py-1 rounded-xl text-sm">今日计划</span>
+                <a href="{% url 'plans:daily_execute' %}" class="text-green-600 hover:text-green-800">去执行</a>
+                {% else %}
+                <form method="post" action="{% url 'plans:activate_plan' plan.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-accent ">设为今日计划</button>
+                </form>
+                {% endif %}
+            {% endif %}
+        </div>
+        <!-- 最近执行记录 -->
+        <div class="mt-3 pt-3 border-t">
+            <p class="text-xs text-gray-400 mb-1">最近执行</p>
+            {% for exe in plan.dayexecution_set.all|slice:":5" %}
+            <a href="{% url 'plans:day_detail' exe.pk %}"
+               class="inline-flex items-center gap-1 text-xs mr-2 mb-1 px-2 py-0.5 rounded-xl
+                      {% if exe.completion_rate >= 0.8 %}bg-green-100 text-green-700
+                      {% elif exe.completion_rate >= 0.5 %}bg-yellow-100 text-yellow-700
+                      {% else %}bg-red-100 text-red-700{% endif %}">
+                {{ exe.date|date:"m/d" }} {% widthratio exe.completion_rate 1 100 %}%
+            </a>
+            {% empty %}
+            <p class="text-xs text-gray-400">暂无执行记录</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-16">
+        <div class="text-5xl mb-4">📚</div>
+        <p class="text-gray-400 mb-2">收藏库还是空的</p>
+        <p class="text-sm text-gray-400 mb-6">去模板库逛逛，找到喜欢的 Fork 一个</p>
+        <a href="{% url 'patterns:pattern_list' %}"
+           class="inline-block btn-accent px-6 py-2 rounded-xl text-sm">
+            去模板库 →
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+{# 今日计划标签：显示合并时间轴 #}
+{% elif tab == 'today' %}
+    {% if merged_blocks %}
+    <div class="space-y-4">
+        <div class="text-sm text-gray-500 mb-2">
+            已启用 {{ enabled_count }} 个计划，共 {{ merged_blocks|length }} 个任务
+        </div>
+
+        <a href="{% url 'plans:daily_execute' %}"
+           class="inline-block btn-accent text-white px-6 py-3 rounded-lg hover:btn-accent mb-4">
+            🚀 开始今日执行
+        </a>
+
+        <div class="space-y-2">
+            {% for block in merged_blocks %}
+            <div class="rounded-xl border border-muted px-4 py-3 theme-card {% if block.is_completed %}border-l-4 border-l-green-500{% endif %}">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1">
+                        <p class="font-medium {% if block.is_completed %}line-through text-gray-400{% endif %}">
+                            {{ block.action }}
+                        </p>
+                    </div>
+                    <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {{ block.start_time|time:"H:i" }}
+                    </span>
+                    <span class="text-xs text-gray-400">{{ block.plan.title }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-center py-12">
+        还没有启用任何计划。<br>
+        去「📚 我的收藏」标签，点击「✓ 已启用」来开启计划。
+    </p>
+    {% endif %}
+{% endif %}
+{% endblock %}

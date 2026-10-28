@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}个人资料 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold mb-6">个人资料</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-6 text-center">
+            {% if user.avatar %}
+            <img src="{{ user.avatar.url }}" class="w-20 h-20 rounded-full mx-auto mb-2 object-cover">
+            {% else %}
+            <div class="w-20 h-20 rounded-full mx-auto mb-2  flex items-center justify-center text-accent text-2xl">
+                {{ user.email|first|upper }}
+            </div>
+            {% endif %}
+            <label class="block text-sm text-accent cursor-pointer ">
+                更换头像
+                <input type="file" name="avatar" accept="image/*" class="hidden">
+            </label>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+            <input type="text" value="{{ user.email }}" disabled
+                   class="w-full border rounded-xl px-4 py-2 bg-gray-50 text-gray-500">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">界面主题</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {% for label, value, color, name in themes %}
+                <label class="cursor-pointer">
+                    <input type="radio" name="theme" value="{{ value }}" class="hidden peer"
+                           {% if user.theme == value %}checked{% elif not user.theme and value == 'warm' %}checked{% endif %}>
+                    <div class="rounded-xl border-2 p-3 text-center text-xs peer-checked: peer-checked:ring-2 peer-checked: transition">
+                        <div class="w-full h-6 rounded mb-1" style="background: {{ color }}; border: 1px solid #ddd;"></div>
+                        {{ label }} {{ name }}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">兴趣标签</label>
+            <input type="text" name="interest_tags" value="{{ user.interest_tags }}"
+                   placeholder="编程, 健身, 阅读, 冥想（逗号分隔）"
+                   class="w-full border rounded-xl px-4 py-2">
+        </div>
+
+        <button type="submit"
+                class="w-full btn-accent text-white py-3 rounded-xl hover:btn-accent">
+            保存
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+# ============================================================
+# Pattern 后端（Django）— .gitignore
+# 铁律：.env 绝不能进仓库（里面有数据库密码、QQ 邮箱授权码、
+#       WX_APPSECRET、SECRET_KEY）。打包上传时也必须 --exclude=".env"。
+# ⚠️ 本文件不支持"行尾注释"：# 后面的内容会被当成规则的一部分，所以注释一律单独一行。
+# ============================================================
+
+# ---------- 密钥 / 环境 ----------
+.env
+.env.*
+!.env.example
+.credentials*
+*.pem
+*.key
+
+# ---------- Python / 虚拟环境 ----------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------- Django 运行时产物（用户上传 / collectstatic / 日志）----------
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+dev_log/
+*.log
+
+# ---------- 构建 / 部署产物 ----------
+*.tar.gz
+*.zip
+pattern-h5/
+
+# ---------- 临时脚本 / 备份 / 一次性自检 ----------
+*.bak
+*.bak-*
+*.orig
+*.rej
+_t0*
+_export_quick.py
+_share_demo.png
+~$*
+
+# ---------- 编辑器 / 系统 ----------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+# 说明：static/fonts/ 里 7 个 Noto Sans SC 字体（约 55MB）是**故意提交**的
+# —— 分享海报（PIL）靠它们渲染中文，新克隆没有它们海报会掉成默认字体。
+# ============================================================

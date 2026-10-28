@@ -1,0 +1,97 @@
+{
+    "name" : "xingdongmao",
+    "appid" : "__UNI__E4F52A9",
+    "description" : "",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
+    "transformPx" : false,
+    /* 5+App特有相关 */
+    "app-plus" : {
+        "usingComponents" : true,
+        "nvueStyleCompiler" : "uni-app",
+        "compilerVersion" : 3,
+        "splashscreen" : {
+            "alwaysShowBeforeRender" : true,
+            "waiting" : true,
+            "autoclose" : true,
+            "delay" : 0
+        },
+        /* 模块配置 */
+        "modules" : {},
+        /* 应用发布信息 */
+        "distribute" : {
+            /* android打包配置 */
+            "android" : {
+                "permissions" : [
+                    "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_LOGS\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
+                    "<uses-feature android:name=\"android.hardware.camera.autofocus\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+                    "<uses-permission android:name=\"android.permission.GET_ACCOUNTS\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_PHONE_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
+                    "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
+                    "<uses-feature android:name=\"android.hardware.camera\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
+                ]
+            },
+            /* ios打包配置 */
+            "ios" : {},
+            /* SDK配置 */
+            "sdkConfigs" : {}
+        }
+    },
+    /* 快应用特有相关 */
+    "quickapp" : {},
+    /* 小程序特有相关 */
+    "mp-weixin" : {
+        "appid" : null,
+        "setting" : {
+            "urlCheck" : false
+        },
+        "usingComponents" : true
+    },
+    "mp-alipay" : {
+        "usingComponents" : true
+    },
+    "mp-baidu" : {
+        "usingComponents" : true
+    },
+    "mp-toutiao" : {
+        "usingComponents" : true
+    },
+    /* H5 网页版：与小程序共用同一套页面代码，部署在 xingdongmao.com/app/
+       （2026-10-15：base 回到 "/app/" —— 站点实际就挂在 /app/ 下，base 写 "/" 会让
+        产物去请求 /assets/…（不存在）→ 白/黑屏。若以后真要迁到根路径，
+        必须同时改这里和 nginx，并重发前端） */
+    "h5" : {
+        "title" : "行动锚",
+        /* history 模式 URL 好看（/app/pages/detail/detail?id=23）；
+           需要 nginx 把找不到的路径 fallback 到 /app/index.html */
+        "router" : {
+            "mode" : "history",
+            "base" : "/app/"
+        },
+        /* rpx→rem 的换算基准见 App.vue 的 H5 样式块：这里写没用（运行时只读 pages.json 的 globalStyle，
+           而那儿写会污染小程序的 app.json），所以放样式里做 *//* H5 与 API 同域，本地 `uni serve` 调试时用这个代理避免跨域 */
+        "devServer" : {
+            "port" : 8080,
+            "proxy" : {
+                "/api" : {
+                    "target" : "https://xingdongmao.com",
+                    "changeOrigin" : true
+                }
+            }
+        }
+    },
+    /* 关闭 uni 统计：网页版默认会把页面数据上报到 DCloud，商业站点先不接（要开就改 true） */
+    "uniStatistics" : {
+        "enable" : false
+    },
+    "vueVersion" : "3"
+}

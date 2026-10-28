@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - Pattern{% endblock %}
+
+{% block content %}
+<div class="text-center py-12">
+    <h1 class="text-4xl font-bold mb-2">{{ greeting }}</h1>
+    {% if user.is_authenticated %}
+    <p class="text-lg text-gray-500 mb-8">{{ user.email }}</p>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+        <div class="max-w-md mx-auto theme-card rounded-xl shadow-sm border border-muted p-6">
+            <p class="text-gray-500 mb-6">今天想做点什么？</p>
+            <div class="flex flex-col gap-3">
+                <a href="{% url 'plans:daily_execute' %}"
+                   class="block btn-accent py-3 rounded-xl text-sm">🚀 开始今日执行</a>
+                <a href="{% url 'plans:plan_list' %}"
+                   class="block border border-muted py-3 rounded-xl text-sm">📚 管理收藏库</a>
+                <a href="{% url 'patterns:pattern_list' %}"
+                   class="block border border-muted py-3 rounded-xl text-sm">🔍 浏览模板库</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="max-w-md mx-auto theme-card rounded-xl shadow-sm border border-muted p-6">
+            <p class="text-gray-500 mb-6">登录后开始使用 Pattern</p>
+            <a href="{% url 'account_login' %}"
+               class="inline-block btn-accent px-6 py-3 rounded-xl text-sm">登录</a>
+            <a href="{% url 'account_signup' %}"
+               class="inline-block ml-2 border border-muted px-6 py-3 rounded-xl text-sm">注册</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends "admin/base_site.html" %}
+{% comment %}
+#046 内部批量导入页（只对 is_staff 可见：admin_view 已经把门）。
+
+用法：把 AI 从图片提取的 JSON 整段粘进来 → 先点「预览」看清将导入什么 → 再点「导入」。
+预览是本地 JS 解析（不落库），导入才真正写草稿。
+{% endcomment %}
+
+{% block title %}批量导入模板{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <h1 style="margin-bottom:12px">批量导入模板（内部）</h1>
+
+  {% if error %}
+    <ul class="messagelist"><li class="error">导入失败：{{ error }}</li></ul>
+  {% endif %}
+
+  {% if result %}
+    <div class="module" style="padding:12px 16px;margin-bottom:16px">
+      <h2 style="margin:0 0 8px">导入结果</h2>
+      <p style="margin:4px 0">
+        共 {{ result.total }} 个模板：<b>成功 {{ result.created }} 个</b>（已存为草稿），
+        跳过 {{ result.skipped|length }} 个。
+      </p>
+      {% if result.skipped %}
+        <table style="width:100%;margin-top:8px">
+          <thead><tr><th style="width:70px">序号</th><th style="width:30%">标题</th><th>原因</th></tr></thead>
+          <tbody>
+            {% for s in result.skipped %}
+              <tr><td>#{{ s.index }}</td><td>{{ s.title|default:"—" }}</td><td>{{ s.reason }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+      <p style="margin-top:12px">
+        <a class="button" href="{% url 'admin:quick_quickpattern_changelist' %}">去模板列表复核/发布 →</a>
+      </p>
+    </div>
+  {% endif %}
+
+  <form method="post" style="margin-bottom:20px">
+    {% csrf_token %}
+    <fieldset class="module aligned" style="padding:12px 16px">
+      <div class="form-row">
+        <label for="payload" style="font-weight:600">粘贴 AI 输出的 JSON：</label>
+        <textarea id="payload" name="payload" rows="16" style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px"
+          placeholder='{"templates":[{"title":"...","tagline":"...","category":"life_home","icon":"🏠","steps":[{"title":"...","instruction":"...","explain":"","duration_seconds":30}]}]}'>{{ raw }}</textarea>
+      </div>
+      <div class="submit-row" style="padding-left:0">
+        <input type="button" value="预览" onclick="biPreview()">
+        <input type="submit" value="导入（存为草稿）" class="default">
+      </div>
+    </fieldset>
+  </form>
+
+  <div id="bi-preview" class="module" style="padding:12px 16px;display:none;margin-bottom:20px">
+    <h2 style="margin:0 0 8px">预览</h2>
+    <div id="bi-preview-body"></div>
+  </div>
+
+  <div class="module" style="padding:12px 16px">
+    <h2 style="margin:0 0 8px">配套提示词（图片 → 模板 JSON）</h2>
+    <p style="margin:4px 0 8px;color:#666">
+      把小红书图/教程截图 + 下面这段提示词一起发给支持看图的对话式 AI，拿到 JSON 后粘到上面的框里。
+    </p>
+    <p><input type="button" value="复制提示词" onclick="biCopyPrompt()"></p>
+    <textarea id="bi-prompt" rows="22" readonly
+      style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px">{{ prompt }}</textarea>
+  </div>
+</div>
+
+<script>
+  var BI_CATEGORIES = ['life_out', 'life_home', 'life_daily', 'work_service', 'work_office', 'work_safety', 'other'];
+
+  // ===== #052：把粘进来的一大段里【所有】JSON 块都扫出来 =====
+  // 用括号配对切分（字符串里的括号跳过），所以前后带废话、markdown 围栏、
+  // 多个 JSON 挨着写、裸数组……都能认出来。
+  function biScanBlocks(text) {
+    var blocks = [], i = 0, n = text.length;
+    while (i < n) {
+      var ch = text.charAt(i);
+      if (ch !== '{' && ch !== '[') { i++; continue; }
+      var depth = 0, inStr = false, esc = false, j = i, closed = false;
+      for (; j < n; j++) {
+        var c = text.charAt(j);
+        if (inStr) {
+          if (esc) esc = false;
+          else if (c === '\\') esc = true;
+          else if (c === '"') inStr = false;
+          continue;
+        }
+        if (c === '"') { inStr = true; continue; }
+        if (c === '{' || c === '[') depth++;
+        else if (c === '}' || c === ']') {
+          depth--;
+          if (depth === 0) { closed = true; j++; break; }
+        }
+      }
+      if (!closed) { blocks.push({ raw: text.slice(i), error: '括号不配对（缺收尾的 } 或 ]）' }); break; }
+      blocks.push({ raw: text.slice(i, j) });
+      i = j;
+    }
+    return blocks;
+  }
+
+  // 五形态归一：{templates:[...]} / 裸数组 / 单个模板对象 / 多块合并 / 带围栏带废话
+  function biExtract(text) {
+    var out = { templates: [], failed: [], blocks: 0 };
+    var blocks = biScanBlocks(String(text == null ? '' : text));
+    out.blocks = blocks.length;
+    blocks.forEach(function (b, idx) {
+      var no = idx + 1;
+      if (b.error) { out.failed.push({ index: no, reason: b.error }); return; }
+      var data;
+      try { data = JSON.parse(b.raw); }
+      catch (e) { out.failed.push({ index: no, reason: '不是合法 JSON：' + e.message }); return; }
+      var list = null;
+      if (data && Array.isArray(data.templates)) list = data.templates;
+      else if (Array.isArray(data)) list = data;
+      else if (data && typeof data === 'object' && (data.title || data.steps)) list = [data];
+      if (!list) {
+        out.failed.push({ index: no, reason: '认不出结构（既不是 {templates:[...]}，也不是模板数组/模板对象）' });
+        return;
+      }
+      list.forEach(function (t) { out.templates.push(t); });
+    });
+    return out;
+  }
+
+  function biEsc(v) {
+    // #057⑧：预览表格里的标题/category/报错原因都来自粘贴的文本，拼进 innerHTML 前必须转义。
+    return String(v === undefined || v === null ? '' : v).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function biPreview() {
+    var box = document.getElementById('bi-preview');
+    var body = document.getElementById('bi-preview-body');
+    var text = document.getElementById('payload').value;
+    box.style.display = 'block';
+    var res = biExtract(text);
+    var list = res.templates;
+    if (!list.length) {
+      body.innerHTML = '<p style="color:#ba2121">没扫到可用的 JSON 块。'
+        + (res.failed.length ? '（' + res.failed.map(function (f) { return '第 ' + biEsc(f.index) + ' 段：' + biEsc(f.reason); }).join('；') + '）' : '')
+        + '</p>';
+      return;
+    }
+    var rows = [], bad = 0;
+    list.forEach(function (t, i) {
+      var issues = [];
+      var title = (t && typeof t.title === 'string') ? t.title.trim() : '';
+      var steps = (t && Array.isArray(t.steps)) ? t.steps : [];
+      if (!title) issues.push('title 为空');
+      if (t && t.category && BI_CATEGORIES.indexOf(t.category) < 0) issues.push('category 无效：' + t.category);
+      if (!steps.length) issues.push('steps 为空');
+      if (steps.length > 20) issues.push('步骤过多（' + steps.length + ' 步，上限 20），建议拆成 2-3 个模板');
+      steps.forEach(function (s, j) {
+        if (!s || typeof s.title !== 'string' || !s.title.trim()) issues.push('第 ' + (j + 1) + ' 步 title 为空');
+        var d = s ? s.duration_seconds : 0;
+        if (d !== undefined && d !== null && String(d).trim() !== '' && (isNaN(Number(d)) || Number(d) < 0)) {
+          issues.push('第 ' + (j + 1) + ' 步 duration_seconds 非法');
+        }
+      });
+      if (issues.length) bad++;
+      rows.push('<tr><td>#' + biEsc(i) + '</td><td>' + biEsc(title || '—') + '</td><td>' + biEsc(steps.length) + ' 步</td><td>'
+        + (issues.length ? '<span style="color:#ba2121">' + biEsc(issues.join('；')) + '</span>' : '看起来没问题') + '</td></tr>');
+    });
+    var head = '<p>共扫到 <b>' + biEsc(res.blocks) + '</b> 段 JSON，合并后 <b>' + biEsc(list.length) + '</b> 个模板'
+      + (bad ? '，其中 <b style="color:#ba2121">' + biEsc(bad) + '</b> 个有明显问题（导入时会被跳过并给出原因）' : '')
+      + '。点下面「导入（存为草稿）」才会真正写库。</p>';
+    if (res.failed.length) {
+      head += '<p style="color:#ba2121">另有 ' + biEsc(res.failed.length) + ' 段没解析成功：'
+        + res.failed.map(function (f) { return '第 ' + biEsc(f.index) + ' 段（' + biEsc(f.reason) + '）'; }).join('；') + '</p>';
+    }
+    body.innerHTML = head
+      + '<table style="width:100%"><thead><tr><th style="width:60px">序号</th><th style="width:36%">标题</th><th style="width:70px">步数</th><th>检查</th></tr></thead><tbody>'
+      + rows.join('') + '</tbody></table>';
+  }
+
+  // 提交前把"多块/带废话/裸数组"统一压成一份干净的 {templates:[...]}，
+  // 后端的校验与导入流程一个字都不用改（#052 ④）
+  function biNormalizeForSubmit() {
+    var el = document.getElementById('payload');
+    if (!el) return;
+    var res = biExtract(el.value);
+    if (res.templates.length) el.value = JSON.stringify({ templates: res.templates });
+  }
+
+  function biCopyPrompt() {
+    var el = document.getElementById('bi-prompt');
+    el.removeAttribute('readonly');
+    el.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    el.setAttribute('readonly', 'readonly');
+    alert('提示词已复制');
+  }
+
+  (function () {
+    var el = document.getElementById('payload');
+    if (el && el.form) el.form.addEventListener('submit', biNormalizeForSubmit);
+  })();
+</script>
+{% endblock %}

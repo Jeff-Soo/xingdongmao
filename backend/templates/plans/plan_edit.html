@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}编辑计划 - {{ plan.title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">编辑计划：{{ plan.title }}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {% for block in blocks %}
+    <div class="flex gap-2 items-center mb-2 flex-wrap">
+        <input type="time" name="start_time_{{ block.pk }}"
+               value="{{ block.start_time|time:'H:i' }}" class="border rounded-xl px-2 py-1">
+        <span>—</span>
+        <input type="time" name="end_time_{{ block.pk }}"
+               value="{{ block.end_time|time:'H:i' }}" class="border rounded-xl px-2 py-1">
+        <input type="text" name="action_{{ block.pk }}"
+               value="{{ block.action }}" class="border rounded-xl px-2 py-1 flex-1 min-w-[150px]">
+        <a href="{% url 'plans:move_block' block.pk 'up' %}"
+           class="text-gray-500 hover:text-accent text-sm">↑</a>
+        <a href="{% url 'plans:move_block' block.pk 'down' %}"
+           class="text-gray-500 hover:text-accent text-sm">↓</a>
+        <button type="submit" name="delete_block" value="{{ block.pk }}"
+                class="text-red-500 hover:text-red-700 text-sm">删除</button>
+        {% if block.source_block %}
+        <span class="text-xs text-gray-400 ml-2 w-full" title="原始模板参考">
+            📎 原模板：{{ block.source_block.start_time|time:'H:i' }} {{ block.source_block.action }}
+        </span>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <hr class="my-4">
+    <h3 class="font-semibold mb-2">新增时间块</h3>
+    <div class="flex gap-2">
+        <input type="time" name="new_start_time" class="border rounded-xl px-2 py-1">
+        <input type="time" name="new_end_time" class="border rounded-xl px-2 py-1">
+        <input type="text" name="new_action" placeholder="做什么" class="border rounded-xl px-2 py-1 flex-1">
+    </div>
+    <button type="submit" class="btn-accent text-white px-4 py-2 rounded-xl mt-4 hover:btn-accent">保存</button>
+</form>
+
+<div class="mt-6">
+    <a href="{% url 'plans:plan_list' %}" class="text-gray-500 hover:text-accent">&larr; 返回计划列表</a>
+</div>
+{% endblock %}

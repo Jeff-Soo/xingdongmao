@@ -1,0 +1,82 @@
+{% comment %}
+Admin 首页顶部的监控看板。数据来自 api.admin_views.dashboard_stats()，
+由 quick/templatetags/dashboard_extras.py 的 {% dashboard_panel %} 注入。
+样式内联 + 用 Admin 自己的 CSS 变量（带 fallback），深浅色主题都不至于看不清。
+{% endcomment %}
+<div class="module" style="margin-bottom:20px;">
+  <h2>运营看板</h2>
+  <div style="padding:14px;">
+
+    {# ===== 异常提示：红色=要立刻处理，黄色=留意 ===== #}
+    {% if alerts %}
+      <div style="margin-bottom:16px;">
+        {% for a in alerts %}
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin-bottom:8px;border-radius:6px;
+                      border-left:4px solid {% if a.level == 'danger' %}#ba2121{% else %}#b45309{% endif %};
+                      background:var(--darkened-bg, #f8f8f8);">
+            <span style="font-size:13px;font-weight:700;white-space:nowrap;
+                         color:{% if a.level == 'danger' %}var(--error-fg, #ba2121){% else %}#b45309{% endif %};">
+              {% if a.level == 'danger' %}需立即处理{% else %}留意{% endif %}
+            </span>
+            <span style="flex:1;font-size:13px;line-height:1.5;color:var(--body-fg, #333);">
+              {{ a.text }}
+              <span style="color:var(--body-quiet-color, #666);">— {{ a.hint }}</span>
+            </span>
+            <a href="{{ a.url }}" style="font-size:13px;white-space:nowrap;">去处理 →</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="margin-bottom:16px;padding:8px 12px;border-radius:6px;background:var(--darkened-bg, #f8f8f8);
+                  font-size:13px;color:var(--body-quiet-color, #666);">暂无异常：没有待处理举报，也没有异常流量</div>
+    {% endif %}
+
+    {# ===== 核心指标 ===== #}
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      {% for c in cards %}
+        <div style="flex:1 1 150px;min-width:150px;padding:12px 14px;border-radius:8px;
+                    background:var(--darkened-bg, #f8f8f8);
+                    border:1px solid {% if c.danger %}#ba2121{% else %}var(--hairline-color, #e0e0e0){% endif %};">
+          <div style="font-size:12px;color:var(--body-quiet-color, #666);">{{ c.label }}</div>
+          <div style="font-size:24px;font-weight:700;line-height:1.3;margin-top:2px;
+                      color:{% if c.danger %}var(--error-fg, #ba2121){% else %}var(--body-fg, #333){% endif %};">
+            {{ c.value }}
+          </div>
+          <div style="font-size:12px;color:var(--body-quiet-color, #666);">
+            {% if c.url %}<a href="{{ c.url }}">{{ c.sub }}</a>{% else %}{{ c.sub }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {# ===== 评分分布 ===== #}
+    <div style="margin-top:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--body-fg, #333);">
+        评分分布{% if ratings_total %}（共 {{ ratings_total }} 条）{% endif %}
+      </div>
+      {% if ratings_total %}
+        {% for r in rating_dist %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;color:var(--body-quiet-color, #666);">
+            <span style="width:38px;">{{ r.stars }} 星</span>
+            <span style="flex:1;height:10px;border-radius:5px;background:var(--darkened-bg, #f0f0f0);overflow:hidden;">
+              <span style="display:block;height:10px;width:{{ r.percent }}%;background:var(--primary, #417690);"></span>
+            </span>
+            <span style="width:72px;text-align:right;">{{ r.count }} 条 · {{ r.percent }}%</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="font-size:12px;color:var(--body-quiet-color, #666);">还没有评分</div>
+      {% endif %}
+    </div>
+
+    {# ===== 快捷入口 ===== #}
+    <div style="margin-top:16px;font-size:12px;color:var(--body-quiet-color, #666);">
+      快捷入口：
+      <a href="{{ reported_url }}">待处理举报</a> ·
+      <a href="{{ patterns_url }}">全部模板</a> ·
+      <a href="{{ users_url }}">用户</a>
+      <span style="margin-left:8px;">（应急怎么处置见 DEPLOY.md 第 6 节）</span>
+    </div>
+
+  </div>
+</div>

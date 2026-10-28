@@ -1,0 +1,6 @@
+<span class="{% if field == 'action' %}font-medium editable-task{% else %}editable-time text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full{% endif %}"
+      hx-get="{% url 'plans:inline_edit_block' block.pk %}?field={{ field }}"
+      hx-trigger="click"
+      hx-target="this"
+      hx-swap="outerHTML"
+      title="点击编辑{% if field == 'action' %}任务{% elif field == 'start_time' %}开始时间{% else %}结束时间{% endif %}">{% if field != 'action' %}≈ {% endif %}{{ value }}</span>

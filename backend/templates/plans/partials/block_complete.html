@@ -1,0 +1,18 @@
+<div id="block-card-{{ block.pk }}" class="rounded-xl border border-muted px-4 py-3 theme-card border-l-4 border-l-green-500 complete-pop">
+    <div class="flex items-center gap-3">
+        <div class="flex-1">
+            <p class="line-through text-gray-400 font-medium">{{ block.action }}</p>
+        </div>
+        <button type="button"
+                hx-post="{% url 'plans:undo_block' block.pk %}"
+                hx-target="#block-card-{{ block.pk }}"
+                hx-swap="outerHTML"
+                class="text-xs text-gray-400 hover:text-gray-600 px-1"
+                title="撤销完成">↩</button>
+        <span class="text-green-500 text-xl flex-shrink-0">✓</span>
+    </div>
+    <div class="flex items-center gap-2 mt-1.5">
+        <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ block.start_time|time:"H:i" }} — {{ block.end_time|time:"H:i" }}</span>
+        <span class="text-xs text-gray-400 ml-auto">{{ block.plan.title }}</span>
+    </div>
+</div>

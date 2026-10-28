@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}创建模板 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold mb-6">创建新模板</h1>
+
+    <form method="post" action="{% url 'patterns:create_pattern' %}" onsubmit="renumberBlocks()">
+        {% csrf_token %}
+        <input type="hidden" name="total_blocks" id="total_blocks" value="0">
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">模板名称</label>
+            <input type="text" name="title" required
+                   placeholder="如：我的晨间 Routine"
+                   class="w-full border rounded-lg px-4 py-2 text-lg">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">描述（可选）</label>
+            <textarea name="description" rows="2"
+                      placeholder="简单描述这个模板适合谁、怎么用"
+                      class="w-full border rounded-lg px-4 py-2"></textarea>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">难度</label>
+            <select name="difficulty" class="border rounded-lg px-4 py-2">
+                <option value="medium">中等</option>
+                <option value="easy">简单</option>
+                <option value="hard">困难</option>
+            </select>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">分类（可选，选已有的或输入新的）</label>
+            <input type="text" name="category" list="category-list"
+                   placeholder="如：晨间、工作、学习、运动"
+                   class="w-full border rounded-lg px-4 py-2">
+            <datalist id="category-list">
+                {% for cat in existing_categories %}
+                <option value="{{ cat }}">
+                {% endfor %}
+            </datalist>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">任务列表</label>
+            <div id="block-list" class="space-y-2">
+            </div>
+            <button type="button" onclick="addBlock()"
+                    class="mt-3 text-accent  text-sm">
+                ＋ 添加任务
+            </button>
+        </div>
+
+        <div class="mb-6 p-4 bg-gray-50 rounded-xl">
+            <details>
+                <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+                    📋 或粘贴文本导入（每行一条：时间 动作名称）
+                </summary>
+                <textarea id="import-text" rows="5"
+                          placeholder="07:00 晨跑&#10;07:30 冥想&#10;08:00 深度工作&#10;12:00 午餐"
+                          class="w-full border rounded-lg px-4 py-2 mt-3 text-sm font-mono"></textarea>
+                <button type="button" onclick="importBlocks()"
+                        class="mt-2 text-sm bg-gray-200 text-gray-700 px-3 py-1 rounded-xl hover:bg-gray-300">
+                    解析并导入
+                </button>
+            </details>
+        </div>
+
+        <button type="submit"
+                class="w-full btn-accent text-white py-3 rounded-lg text-lg hover:btn-accent">
+            保存模板
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let blockCounter = 0;
+
+function generateId() {
+    blockCounter++;
+    return blockCounter;
+}
+
+function addBlock(startTime = '', action = '', isFloating = false, endTime = '') {
+    const blockId = generateId();
+    const div = document.createElement('div');
+    div.className = 'flex flex-col gap-1 block-row';
+    div.dataset.blockId = blockId;
+
+    // #057⑨：改用 createElement + value 赋值，不再拼 innerHTML 字符串。
+    // 以前 `${action}` 直接插进 value="..." 里 —— AI 解析/粘贴来的文本只要带个引号
+    // 就能闭合属性、塞进任意标签（自己粘一次是自 XSS，粘别人分享的模板就是存储 XSS）。
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 items-center';
+
+    const timeRow = document.createElement('div');
+    timeRow.className = (isFloating ? 'hidden ' : '') + 'flex gap-2 items-center time-row';
+    const startInput = document.createElement('input');
+    startInput.type = 'time';
+    startInput.className = 'border rounded-xl px-2 py-1 w-28 start-time-input';
+    startInput.value = startTime;
+    startInput.disabled = isFloating;
+    const dash = document.createElement('span');
+    dash.className = 'text-gray-400';
+    dash.textContent = '—';
+    const endInput = document.createElement('input');
+    endInput.type = 'time';
+    endInput.className = 'border rounded-xl px-2 py-1 w-28 end-time-input';
+    endInput.value = endTime;
+    endInput.disabled = isFloating;
+    timeRow.append(startInput, dash, endInput);
+
+    const floatRow = document.createElement('div');
+    floatRow.className = (isFloating ? '' : 'hidden ') + 'float-row';
+    const floatLabel = document.createElement('input');
+    floatLabel.type = 'text';
+    floatLabel.className = 'border rounded-xl px-2 py-1 w-56 text-sm text-purple-600 bg-purple-50 float-label-input';
+    floatLabel.value = action;
+    floatLabel.placeholder = '如：通勤时、午休时、睡前';
+    floatRow.appendChild(floatLabel);
+
+    const actionInput = document.createElement('input');
+    actionInput.type = 'text';
+    actionInput.className = 'border rounded-xl px-3 py-1 flex-1 action-input';
+    actionInput.value = action;
+    actionInput.placeholder = '做什么';
+    actionInput.required = true;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'text-red-400 hover:text-red-600 text-sm';
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => removeBlock(removeBtn));
+
+    row.append(timeRow, floatRow, actionInput, removeBtn);
+
+    const floatBar = document.createElement('div');
+    floatBar.className = 'flex items-center gap-1 ml-1';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'floating-checkbox';
+    checkbox.checked = isFloating;
+    checkbox.addEventListener('change', () => toggleFloatingRow(checkbox));
+    const label = document.createElement('label');
+    label.className = 'text-xs text-gray-500 cursor-pointer';
+    label.textContent = '浮动（不固定时间，用标签代替）';
+    floatBar.append(checkbox, label);
+
+    div.append(row, floatBar);
+    document.getElementById('block-list').appendChild(div);
+}
+
+function removeBlock(btn) {
+    btn.closest('.block-row').remove();
+    renumberBlocks();
+}
+
+function toggleFloatingRow(checkbox) {
+    const row = checkbox.closest('.block-row');
+    const timeRow = row.querySelector('.time-row');
+    const floatRow = row.querySelector('.float-row');
+    const startInput = row.querySelector('.start-time-input');
+    const endInput = row.querySelector('.end-time-input');
+    const checked = checkbox.checked;
+
+    if (checked) {
+        timeRow.classList.add('hidden');
+        floatRow.classList.remove('hidden');
+        startInput.disabled = true;
+        endInput.disabled = true;
+    } else {
+        timeRow.classList.remove('hidden');
+        floatRow.classList.add('hidden');
+        startInput.disabled = false;
+        endInput.disabled = false;
+    }
+}
+
+function renumberBlocks() {
+    const rows = document.querySelectorAll('#block-list .block-row');
+    rows.forEach((row, idx) => {
+        const i = idx + 1;
+        row.querySelector('.start-time-input').name = 'start_time_' + i;
+        row.querySelector('.end-time-input').name = 'end_time_' + i;
+        row.querySelector('.action-input').name = 'action_' + i;
+        row.querySelector('.floating-checkbox').name = 'floating_' + i;
+        const floatLabel = row.querySelector('.float-label-input');
+        if (floatLabel) floatLabel.name = 'floating_label_' + i;
+    });
+    document.getElementById('total_blocks').value = rows.length;
+}
+
+function importBlocks() {
+    const text = document.getElementById('import-text').value.trim();
+    if (!text) return;
+    const lines = text.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+        const match = line.match(/^(\d{1,2}:\d{2})\s+(.+)/);
+        if (match) {
+            const startTime = match[1];
+            const action = match[2];
+            const [h, m] = startTime.split(':').map(Number);
+            const endH = Math.floor((h * 60 + m + 30) / 60);
+            const endM = (h * 60 + m + 30) % 60;
+            const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            addBlock(startTime, action, false, endTime);
+        } else {
+            addBlock('', line.trim(), true);
+        }
+    }
+    document.getElementById('import-text').value = '';
+    document.querySelector('details').open = false;
+}
+
+// 不设默认空行——用户点「添加任务」或粘贴导入来加
+</script>
+{% endblock %}

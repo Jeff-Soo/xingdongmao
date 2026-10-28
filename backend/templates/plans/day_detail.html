@@ -1,0 +1,76 @@
+{# templates/plans/day_detail.html #}
+{% extends "base.html" %}
+
+{% block title %}{{ execution.date }} 执行详情 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+
+    <a href="{% url 'plans:plan_list' %}" class="text-accent text-sm">← 返回</a>
+
+    <h1 class="text-2xl font-bold mt-4 mb-2">{{ execution.date|date:"Y年m月d日" }} 执行详情</h1>
+    <p class="text-gray-500 mb-6">{{ execution.date|date:"Y年m月d日" }}</p>
+
+    <!-- 完成率环 -->
+    <div class="text-center mb-8">
+        <div class="relative inline-flex items-center justify-center">
+            <svg class="w-32 h-32 transform -rotate-90">
+                <circle cx="64" cy="64" r="56" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+                <circle cx="64" cy="64" r="56"
+                        stroke="{% if execution.completion_rate >= 0.8 %}#22c55e{% elif execution.completion_rate >= 0.5 %}#f59e0b{% else %}#ef4444{% endif %}"
+                        stroke-width="12" fill="none"
+                        stroke-linecap="round"
+                        style="stroke-dasharray: {% widthratio execution.completion_rate 1 351.86 %}px 351.86px; stroke-dashoffset: 0;"/>
+            </svg>
+            <span class="absolute text-3xl font-bold">{% widthratio execution.completion_rate 1 100 %}%</span>
+        </div>
+        <p class="text-gray-500 mt-2">
+            {{ execution.completed_blocks }}/{{ execution.total_blocks }} 项完成
+            {% if execution.skipped_blocks %}
+            <span class="text-yellow-500 ml-2">{{ execution.skipped_blocks }} 项跳过</span>
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- 启用的计划列表 -->
+    <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-500 mb-2">当天启用的计划</h3>
+        <div class="flex flex-wrap gap-2">
+            {% for plan in plans %}
+            <span class=" text-indigo-700 px-3 py-1 rounded-full text-sm">{{ plan.title }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 时间块明细 -->
+    <div class="space-y-2">
+        {% for block in blocks %}
+        <div class="flex items-center gap-3 py-2 border-b">
+            <span class="text-gray-400 text-sm w-20">{{ block.start_time|time:"H:i" }}</span>
+            <span class="flex-1 {% if block.is_completed %}text-green-600{% else %}text-gray-400 line-through{% endif %}">
+                {{ block.action }}
+            </span>
+            {% if block.is_completed %}
+            <span class="text-green-500">✓ {{ block.completed_at|time:"H:i" }}</span>
+            {% else %}
+            <span class="text-red-400">✗</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 感受（从当日快照读取，持久化存储） -->
+    {% if execution.mood or execution.note %}
+    <div class="mt-8 p-4 bg-gray-50 rounded-xl">
+        <h3 class="font-semibold mb-2">当日感受</h3>
+        {% if execution.mood %}
+        <p class="text-2xl mb-2">{{ execution.mood }}</p>
+        {% endif %}
+        {% if execution.note %}
+        <p class="text-gray-600">{{ execution.note }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

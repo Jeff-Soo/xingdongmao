@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.email }} 的主页 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">{{ profile_user.email }} 的主页</h1>
+
+    <!-- 执行统计 -->
+    <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="theme-card rounded-xl p-6 text-center shadow-sm">
+            <p class="text-3xl font-bold text-accent">{{ total_executions }}</p>
+            <p class="text-gray-500 text-sm">总执行天数</p>
+        </div>
+        <div class="theme-card rounded-xl p-6 text-center shadow-sm">
+            <p class="text-3xl font-bold text-green-600">
+                {% widthratio avg_rate 1 100 %}%
+            </p>
+            <p class="text-gray-500 text-sm">平均完成率</p>
+        </div>
+    </div>
+
+    <!-- 创建的模板 -->
+    <h2 class="text-xl font-semibold mb-4">创建的模板</h2>
+    <div class="space-y-3">
+        {% for pattern in patterns %}
+        <a href="{% url 'patterns:pattern_detail' pattern.pk %}"
+           class="block theme-card rounded-xl p-4 shadow-sm hover:shadow-md transition">
+            <h3 class="font-semibold text-accent">{{ pattern.title }}</h3>
+            <p class="text-gray-500 text-sm">{{ pattern.description|truncatechars:80 }}</p>
+            <p class="text-gray-400 text-xs mt-1">
+                {{ pattern.created_at|date:"Y-m-d" }} · {{ pattern.forks.count }} 次 Fork
+            </p>
+        </a>
+        {% empty %}
+        <p class="text-gray-400">还没有创建过模板。</p>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6">
+        <a href="{% url 'patterns:pattern_list' %}" class="text-accent text-sm">← 返回模板库</a>
+    </div>
+</div>
+{% endblock %}

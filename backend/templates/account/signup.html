@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}注册 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-12">
+    <h1 class="text-2xl font-bold mb-6">注册</h1>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="w-full btn-accent text-white py-2 rounded-lg hover:btn-accent">
+            注册
+        </button>
+    </form>
+    <p class="mt-4 text-center text-gray-500">
+        已有账号？<a href="{% url 'account_login' %}" class="text-accent">登录</a>
+    </p>
+</div>
+{% endblock %}

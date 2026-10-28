@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}我的日历 - Pattern{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">打卡日历</h1>
+        <span id="calendar-stats" class="text-sm text-gray-500"></span>
+    </div>
+
+    <div id="calendar" class="space-y-6"></div>
+
+    <div class="flex items-center gap-2 mt-6 text-xs text-gray-400">
+        <span>0%</span>
+        <span class="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-100"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-200"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-300"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-400"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-500"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-600"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-700"></span>
+        <span class="w-3 h-3 rounded-sm bg-green-800"></span>
+        <span>100%</span>
+    </div>
+</div>
+
+<script>
+fetch("{% url 'plans:calendar_data' %}")
+    .then(r => r.json())
+    .then(d => {
+        const container = document.getElementById('calendar');
+        const data = d.data;
+        const start = new Date(d.start + 'T00:00:00');
+        const end = new Date(d.end + 'T00:00:00');
+
+        let totalDays = 0, activeDays = 0;
+        Object.values(data).forEach(e => {
+            totalDays++;
+            if (e.rate > 0) activeDays++;
+        });
+        document.getElementById('calendar-stats').textContent =
+            `${activeDays}/${totalDays} 天有打卡`;
+
+        const months = {};
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const key = d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+            const monthKey = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+            if (!months[monthKey]) months[monthKey] = [];
+            months[monthKey].push({
+                date: new Date(d), key: key,
+                entry: data[key] || null, dayOfWeek: d.getDay(),
+            });
+        }
+
+        const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+
+        // 8 级绿色映射
+        function getColor(rate) {
+            if (rate < 0) return 'bg-gray-50';
+            if (rate >= 0.88) return 'bg-green-800';
+            if (rate >= 0.75) return 'bg-green-700';
+            if (rate >= 0.62) return 'bg-green-600';
+            if (rate >= 0.50) return 'bg-green-500';
+            if (rate >= 0.37) return 'bg-green-400';
+            if (rate >= 0.25) return 'bg-green-300';
+            if (rate >= 0.12) return 'bg-green-200';
+            if (rate >  0)    return 'bg-green-100';
+            return 'bg-red-100';
+        }
+        function getTextColor(rate) {
+            return (rate >= 0.5 || rate < 0) ? 'text-white' : 'text-gray-700';
+        }
+
+        let html = '';
+        for (const [monthLabel, days] of Object.entries(months)) {
+            html += '<div class="theme-card rounded-xl border border-muted p-4">';
+            html += `<h3 class="text-sm font-semibold text-gray-500 mb-3">${monthLabel}</h3>`;
+            html += '<div class="grid grid-cols-7 gap-1 mb-1">';
+            dayNames.forEach(d => html += `<div class="text-center text-xs text-gray-400 py-1">${d}</div>`);
+            html += '</div><div class="grid grid-cols-7 gap-1">';
+
+            const firstDay = days[0].dayOfWeek;
+            for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+            days.forEach(day => {
+                const entry = day.entry;
+                const rate = entry ? entry.rate : -1;
+                const bg = getColor(rate);
+                const tc = getTextColor(rate);
+                let title = (day.date.getMonth() + 1) + '/' + day.date.getDate();
+                if (rate >= 0) title += ' ' + Math.round(rate * 100) + '%';
+
+                html += `<div class="aspect-square rounded-md ${bg} ${tc} flex items-center justify-center text-[11px] cursor-default" title="${title}">${day.date.getDate()}</div>`;
+            });
+            html += '</div></div>';
+        }
+        container.innerHTML = html;
+    });
+</script>
+{% endblock %}

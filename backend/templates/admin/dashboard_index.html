@@ -1,0 +1,12 @@
+{% extends "admin/index.html" %}
+{% load dashboard_extras %}
+
+{# 只在原生 Admin 首页上方加一块监控看板；应用列表、最近操作等保持 Django 原样（block.super） #}
+{% block content %}
+  {# #046：内部批量导入入口挂在这里，普通用户看不到 admin，也进不来 #}
+  <p style="margin:0 0 12px">
+    <a class="button" href="{% url 'admin:quick_batch_import' %}">📥 批量导入模板（内部工具）</a>
+  </p>
+  {% dashboard_panel %}
+  {{ block.super }}
+{% endblock %}

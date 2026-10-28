@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}模板列表 - Pattern{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">模板列表</h1>
+    {% if user.is_authenticated %}
+    <a href="{% url 'patterns:create_pattern' %}"
+       class="btn-accent text-white px-4 py-2 rounded-lg hover:btn-accent text-sm">
+        ＋ 创建模板
+    </a>
+    {% endif %}
+</div>
+<form method="get" class="flex gap-2 mb-6">
+    <input type="text" name="q" value="{{ current_q }}"
+           placeholder="搜索模板名称、描述或分类..." class="border rounded-xl px-3 py-2 flex-1">
+
+    <select name="difficulty" class="border rounded-xl px-3 py-2">
+        <option value="">全部难度</option>
+        <option value="easy" {% if current_difficulty == 'easy' %}selected{% endif %}>简单</option>
+        <option value="medium" {% if current_difficulty == 'medium' %}selected{% endif %}>中等</option>
+        <option value="hard" {% if current_difficulty == 'hard' %}selected{% endif %}>困难</option>
+    </select>
+
+    <button type="submit" class="btn-accent text-white px-4 py-2 rounded-xl">筛选</button>
+</form>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for pattern in patterns %}
+    <a href="{% url 'patterns:pattern_detail' pattern.pk %}"
+       class="block theme-card rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow">
+        <h2 class="font-semibold text-lg mb-1">
+            {{ pattern.title }}
+            {% if user == pattern.author %}
+            <span class=" text-indigo-700 px-1.5 py-0.5 rounded-full text-xs">我的</span>
+            {% endif %}
+        </h2>
+        <p class="text-gray-500 text-sm mb-3">{{ pattern.description|truncatechars:80 }}</p>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span class=" text-indigo-700 px-2 py-0.5 rounded-xl">{{ pattern.get_difficulty_display }}</span>
+            {% if pattern.category %}
+            <span>{{ pattern.category }}</span>
+            {% endif %}
+            <span class="ml-auto">{{ pattern.time_blocks.count }} 个时间块</span>
+</div>
+    </a>
+    {% empty %}
+    <div class="text-center py-16 col-span-full">
+        <div class="text-5xl mb-4">📋</div>
+        <p class="text-gray-400 mb-2">还没有模板</p>
+        <p class="text-sm text-gray-400 mb-6">来创建第一个模板吧</p>
+        <a href="{% url 'patterns:create_pattern' %}"
+           class="inline-block btn-accent px-6 py-2 rounded-xl text-sm">
+            ＋ 创建模板
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

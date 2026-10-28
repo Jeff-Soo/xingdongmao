@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}执行 - {{ plan.title }}{% endblock %}
+
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">{{ plan.title }}</h1>
+    <form method="post" action="{% url 'plans:toggle_lazy_mode' %}">
+        {% csrf_token %}
+        {% if request.session.is_lazy_mode %}
+            <button type="submit" name="enable" value="0"
+                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm">
+                🔥 恢复正常模式
+            </button>
+        {% else %}
+            <button type="submit" name="enable" value="1"
+                    class="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm hover:bg-orange-200">
+                ☕ 轻松模式
+            </button>
+        {% endif %}
+    </form>
+</div>
+
+{% if request.session.is_lazy_mode %}
+<div class="bg-orange-50 border border-orange-200 text-orange-600 text-sm px-4 py-2 rounded-lg mb-4">
+    ☕ 轻松模式已开启 — 降低标准，但不停下脚步
+</div>
+{% endif %}
+
+<div class="max-w-lg mx-auto">
+    {% if plan.is_all_completed %}
+    <div class="bg-green-100 text-green-700 text-center py-4 rounded-lg mb-6 text-xl">
+        🎉 今日全部完成！
+    </div>
+    {% endif %}
+
+    <div class="space-y-2">
+        {% for block in blocks %}
+        <div class="rounded-xl border border-muted px-4 py-3 theme-card {% if block.is_completed %}border-l-4 border-l-green-500{% endif %}">
+            <div class="flex items-center gap-3">
+                <div class="flex-1">
+                    {% if block.is_completed %}
+                        <p class="line-through text-gray-400 font-medium">{{ block.action }}</p>
+                    {% else %}
+                        <span class="font-medium" title="点击编辑任务">{{ block.action }}</span>
+                    {% endif %}
+                </div>
+
+                {% if not block.is_completed %}
+                <button hx-post="{% url 'plans:complete_block' block.pk %}"
+                        hx-target="closest div.rounded-xl"
+                        hx-swap="outerHTML"
+                        class="w-8 h-8 rounded-full border-2  text-accent hover: flex items-center justify-center flex-shrink-0">
+                    ✓
+                </button>
+                {% else %}
+                <span class="text-green-500 text-xl flex-shrink-0">✓</span>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {{ block.start_time|time:"H:i" }} — {{ block.end_time|time:"H:i" }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if plan.is_all_completed %}
+<div class="max-w-lg mx-auto">
+    <form method="post" action="{% url 'plans:save_mood' %}">
+        {% csrf_token %}
+        <div class="mt-8 p-4 bg-gray-50 rounded-xl">
+            <h3 class="font-semibold mb-2">今天的感受</h3>
+            <input type="hidden" name="mood" id="moodInput" value="">
+            <div class="flex gap-4 mb-4 text-3xl" id="moodSelector">
+                <button type="button" data-mood="😊"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😊</button>
+                <button type="button" data-mood="😐"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😐</button>
+                <button type="button" data-mood="😢"
+                        class="mood-btn hover:scale-125 transition rounded-full p-1">😢</button>
+            </div>
+            <textarea name="note" placeholder="写点感想..." class="w-full border rounded-xl p-2"></textarea>
+            <button type="submit" class="btn-accent text-white px-4 py-2 rounded-xl mt-2">保存</button>
+        </div>
+    </form>
+
+    <div class="mt-6 p-6 bg-green-50 rounded-xl text-center">
+        <p class="text-2xl mb-4">🎉 今日全部完成！</p>
+        <a href="{% url 'plans:today_share_card' %}"
+           class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+           download="今日战绩_{{ today }}.png">
+            📤 晒晒今天的战绩
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.mood-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('moodInput').value = this.dataset.mood;
+            document.querySelectorAll('.mood-btn').forEach(b => {
+                b.classList.remove('ring-2', '', '');
+            });
+            this.classList.add('ring-2', '', '');
+        });
+    });
+</script>
+{% endblock %}

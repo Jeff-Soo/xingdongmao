@@ -1,0 +1,17 @@
+# Pattern 后端依赖清单（部署用）
+#
+# 重建环境：
+#   Linux/macOS:  python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+#   Windows:      py -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+#
+# 版本按当前开发环境（Python 3.14.2 / Django 6.0.6）实测可用锁定。
+# 注意：本文件只列项目真正用到的包；开发机上 pip freeze 里还有 pandas/numpy/aider 等无关包，别拷进来。
+
+Django==6.0.6
+django-allauth==65.18.0
+psycopg2-binary==2.9.12
+pillow==12.3.0
+python-decouple==3.8
+
+# 生产 WSGI 服务器（本地 Windows 用 runserver，不需要它；getMenuButton 之外无平台绑定）
+gunicorn>=23.0.0
